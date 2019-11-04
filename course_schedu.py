@@ -89,6 +89,7 @@ def init_class_datas(all_datas):
     class_rows = {}
     try:
         the_class = classes.get().split(" ")
+        class_count = len(the_class)
         for c in the_class:
             class_rows[c] = {}
         i = 0
@@ -96,7 +97,7 @@ def init_class_datas(all_datas):
             showlog(key)
             for k, v in values.items():
                 if orgs.__contains__(k):
-                    add_to_results(k, the_class[i % 5], v)
+                    add_to_results(k, the_class[i % class_count], v)
                     i = i + 1
     except:
         showlog('init_class_datas failed')
@@ -425,7 +426,7 @@ def main():
     Button(root, text='生成排班', command=doIt).grid(row=4, column=1, )
     Separator(root, orient=VERTICAL).grid(row=2, column=2, rowspan=3, sticky="ns")
 
-    Button(root, text='选择排课文件', command=select_course_file()).grid(row=2, column=3)
+    Button(root, text='选择排课文件', command=select_course_file).grid(row=2, column=3)
     Entry(root, textvariable=path_course_file).grid(row=3, column=3)
     Button(root, text='生成课表', command=make_course).grid(row=4, column=3, columnspan=1)
     root.mainloop()

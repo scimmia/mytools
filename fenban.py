@@ -287,6 +287,7 @@ def doIt():
 
     try:
         the_class = classes.get().split(" ")
+        class_count = len(the_class)
         for c in the_class:
             class_rows[c] = {}
 
@@ -303,7 +304,7 @@ def doIt():
         for rx in range(startline, sh.nrows):
             the_row = []
             row = (sh.row_values(rx))
-            class_name = the_class[class_index%5]
+            class_name = the_class[class_index%class_count]
             for i in selections:
                 the_row.append(row[i])
             if org_index != -1:
