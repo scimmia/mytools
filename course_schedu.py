@@ -43,6 +43,22 @@ wrong_results = []
 header_titles = []
 
 
+class Course(object):
+    def __init__(self, c_date, c_time, c_class, teacher):
+        self.c_date = c_date
+        self.c_time = c_time
+        self.c_class = c_class
+        self.c_teacher = teacher
+    def get_data(self):
+        return [self.c_date,self.c_time,self.c_teacher.c_course_name,'内部师资',self.c_teacher.c_part,self.c_teacher.c_teacher_name,]
+
+
+class Teacher(object):
+    def __init__(self, c_teacher_name, c_course_name, c_part):
+        self.c_teacher_name = c_teacher_name
+        self.c_course_name = c_course_name
+        self.c_part = c_part
+
 def add_to_results(org, the_results, row):
     try:
         city = orgs.get(org)
@@ -403,15 +419,128 @@ def write_to_file(all_rows, class_rows, wrong_results):
     showlog('over')
 
 
+
+def export_class_file(date_list,class_courses,teacher_class):
+    work_book = xlsxwriter.Workbook(path_course_file.get() + datetime.datetime.now().strftime('%H%M') + '排课表.xlsx')
+    head_format = work_book.add_format({
+        'font_size': '16',
+        'bold': 1,
+        'border': 1,
+        'align': 'center',
+        'valign': 'vcenter', })
+    merge_format = work_book.add_format({
+        'font_size': '12',
+        'bold': 1,
+        'border': 1,
+        'align': 'center',
+        'valign': 'vcenter', })
+
+    normal_format = work_book.add_format({
+        'font_size': '12',
+        'border': 1,
+        'align': 'left',
+        'valign': 'vcenter', })
+
+    for name, class_course in class_courses.items():
+        sheet_name = name
+        ws = work_book.add_worksheet(sheet_name)
+        ws.default_row_height = 20
+        ws.set_column(0,1,15)
+        ws.set_column(2,2,60)
+        ws.set_column(3,3,10)
+        ws.set_column(4,4,15)
+        ws.set_column(5,6,10)
+        ws.set_row(0, 50)
+        ws.merge_range(0, 0, 0, 7, ('经营网点转型发展业务骨干培训班课程表--%s' % name), head_format)
+        ws.merge_range(1, 0, 1, 4, '', head_format)
+        ws.merge_range(2, 0, 2, 1, '时间', merge_format)
+        ws.write_row(2, 2, ['课程设置','师资方','单位','讲师','备注'], merge_format )
+        startrow = 3
+        for index, course in enumerate(class_course):
+            ws.write_row(startrow+index, 0, course.get_data(), normal_format)
+
+    time_list = ['8:30-12:00','14:00-17:30','19:00-22:30']
+
+    for name, class_course in teacher_class.items():
+        row_datas = {}
+        for d in date_list:
+            row_datas[d] = {}
+            for t in time_list:
+                row_datas[d][t] = ''
+
+        sheet_name = name.replace('/', '、')
+        ws = work_book.add_worksheet(sheet_name)
+        ws.default_row_height = 20
+        ws.set_column(0, 3, 22)
+        ws.set_row(0, 30)
+        ws.merge_range(0, 0, 0, 3, ('%s专家授课表' % name), head_format)
+        ws.write_row(1, 1, ['8:30-12:00','14:00-17:30','19:00-22:30'], merge_format )
+        for index, course in enumerate(class_course):
+            try:
+                row_datas[course.c_date][course.c_time] += course.c_class+' '
+            except:
+                pass
+        startrow = 2
+        for index,d in enumerate(date_list):
+            ws.write(startrow + index, 0, d, merge_format)
+            for n in range(len(time_list)):
+                ws.write(startrow + index,1+n,row_datas[d][time_list[n]],normal_format)
+
+    # ws = work_book.add_worksheet('讲师')
+    # ws.default_row_height = 20
+    # ws.set_column(0,0,15)
+    # ws.set_column(1,1,60)
+    # ws.set_column(2,2,15)
+    # startrow = 0
+    # for keys, values in teacher_classes.items():
+    #     ws.write(startrow, 0, keys, normal_format)
+    #     ws.write(startrow, 1, values['course'], normal_format)
+    #     ws.write(startrow, 2, values['org'], normal_format)
+    #     startrow += 1
+
+    work_book.close()
+
+
 def make_course():
     if len(path_course_file.get()) <= 0:
         showinfo('提示', '先选择文件')
         return
-    class_rows = {}
+    class_courses = {}
+    teacher_class = {}
+    teacher_course = {}
     if True:
-        the_class = classes.get().split(" ")
-        for c in the_class:
-            class_rows[c] = []
+        book = xlrd.open_workbook(path_course_file.get())
+        sh = book.sheet_by_name('讲师')
+        for rx in range(0, sh.nrows):
+            row = sh.row(rx)
+            if len(row) == 3:
+                teahcer_name = row[0].value
+                the_teacher = Teacher(teahcer_name,row[1].value,row[2].value)
+                teacher_course[teahcer_name] = the_teacher
+                teacher_class[teahcer_name] = []
+        sh = book.sheet_by_name('课程')
+        row = sh.row(0)
+        class_index = {}
+        for i,cell in enumerate(row):
+            if cell.ctype == 1:
+                class_index[cell.value] = i
+                class_courses[cell.value] = []
+        current_date = ''
+        date_list = []
+        for rx in range(1, sh.nrows):
+            row = sh.row(rx)
+            if row[0].ctype != 0:
+                current_date = row[0].value
+                date_list.append(current_date)
+            for class_temp,index in class_index.items():
+                teacher_temp = row[index].value
+                course = Course(current_date,row[1].value,class_temp,teacher_course[teacher_temp])
+                class_courses[class_temp].append(course)
+                teacher_class[teacher_temp].append(course)
+        export_class_file(date_list,class_courses,teacher_class)
+        pass
+
+
 
 def main():
     logs.grid(row=0, column=0, rowspan=6)
