@@ -10,10 +10,14 @@ import xlsxwriter
 from collections import OrderedDict
 from datas import format_header, format_merge, format_normal
 import utils
+import copy
+import numpy as np
 
 sheet_name_class_simple = '排课简略'
 sheet_name_class_all = '排课总览'
+sheet_name_class_middle = '排课安排'
 sheet_name_teacher_info = '讲师'
+pre_count = 0
 
 
 class Course(object):
@@ -104,6 +108,7 @@ def export_mid_file(dates, teacher_classes):
     normal_format = work_book.add_format(format_normal)
 
     ws = work_book.add_worksheet(sheet_name_class_simple)
+    work_book.add_worksheet(sheet_name_class_middle)
     write_dates_to_sheet(ws, dates, merge_format)
     ws.write_row(0, 2, classes.get().split(" "), head_format)
 
@@ -317,7 +322,7 @@ def write_teacher_time_sheet(work_book, class_courses, dates, head_format, merge
                     teacher_datas[teacher_name] = []
                 teacher_datas[teacher_name].append((date, time, class_name))
                 index += 1
-    time_list = ['8:30-12:00', '14:00-17:30', '19:00-22:30']
+    time_list = ['8:00-12:00', '14:00-18:00', '19:00-23:00']
     for name, datas in teacher_datas.items():
         row_datas = OrderedDict()
         for d in dates.keys():
@@ -331,7 +336,7 @@ def write_teacher_time_sheet(work_book, class_courses, dates, head_format, merge
         ws.set_column(0, 3, 22)
         ws.set_row(0, 30)
         ws.merge_range(0, 0, 0, 3, ('%s专家授课表' % name), head_format)
-        ws.write_row(1, 1, ['8:30-12:00', '14:00-17:30', '19:00-22:30'], merge_format)
+        ws.write_row(1, 1, time_list, merge_format)
 
         for index, data in enumerate(datas):
             if row_datas.__contains__(data[0]):
@@ -376,6 +381,83 @@ def get_teacher_info(book):
     return teacher_course
 
 
+def get_available(l, i, j):
+    global pre_count
+    if len(l[l > 9]) == 0:
+        # print(l)
+        pre_count += 1
+        showlog('------------------')
+        showlog(pre_count)
+        b = l.tolist()
+        for i in range(0, len(l)):
+            for j in range(0, len(l[0])):
+                v = b[i][j]
+                if v == 0:
+                    b[i][j] = ''
+                elif v == 1:
+                    b[i][j] = 'A'
+                elif v == 2:
+                    b[i][j] = 'B'
+                elif v == 3:
+                    b[i][j] = 'C'
+                elif v == 4:
+                    b[i][j] = 'D'
+                elif v == 5:
+                    b[i][j] = 'E'
+        for i in range(0, len(l)):
+            showlog('\t'.join(b[i]))
+    else:
+        target_x = -1
+        target_y = -1
+        for m in range(0, i):
+            if 10 in l[m]:
+                for n in range(0, j):
+                    if l[m][n] == 10:
+                        target_x = m
+                        target_y = n
+                        break
+                break
+        for value in range(1, 6):
+            if pre_count > max_count.get():
+                break
+            row = l[target_x]
+            col = l[:, target_y]
+            if (value not in row) and (value not in col):
+                l[target_x][target_y] = value
+                l_temp = copy.deepcopy(l)
+                get_available(l_temp, i, j)
+
+
+def preview_schedu():
+    global pre_count
+    pre_count = 0
+    if len(path_course_file.get()) <= 0:
+        showinfo('提示', '先选择排课文件')
+        return
+    showlog(max_count.get())
+    try:
+        book = xlrd.open_workbook(path_course_file.get())
+        sh = book.sheet_by_name(sheet_name_class_middle)
+        row_count = sh.nrows
+        col_count = sh.ncols
+        showlog(row_count)
+        showlog(col_count)
+        a = np.zeros((row_count, col_count), dtype=np.int)
+        for i in range(0, row_count):
+            row = sh.row(i)
+            for j in range(0, col_count):
+                if row[j].ctype == 2:
+                    if row[j].value == 1:
+                        a[i][j] = 10
+        get_available(a, row_count, col_count)
+
+        showlog('已完成')
+    except Exception as e:
+        showlog('出错了')
+        showlog(str(e))
+    showlog('')
+
+
 def make_course_file():
     if len(path_course_file.get()) <= 0:
         showinfo('提示', '先选择排课文件')
@@ -385,12 +467,12 @@ def make_course_file():
         book = xlrd.open_workbook(path_course_file.get())
         teacher_course = get_teacher_info(book)
 
-        if chVarDis.get():
-            sh = book.sheet_by_name(sheet_name_class_simple)
-            class_courses = get_class_course_from_class(book)
-        else:
+        if video.get() == 1:
             sh = book.sheet_by_name(sheet_name_class_all)
             class_courses = get_class_course_from_schedu(book)
+        elif video.get() == 2:
+            sh = book.sheet_by_name(sheet_name_class_simple)
+            class_courses = get_class_course_from_class(book)
         dates = get_dates(sh)
 
         export_course(teacher_course, dates, class_courses)
@@ -399,6 +481,10 @@ def make_course_file():
         showlog('出错了')
         showlog(str(e))
     showlog('')
+
+
+def clear_text():
+    logs.delete(1.0, END)
 
 
 def main():
@@ -411,12 +497,19 @@ def main():
     Button(root, text='选择课程文件', command=lambda: utils.selectFile(pathFile)).grid(row=2, column=1)
     Entry(root, textvariable=pathFile).grid(row=3, column=1)
     Button(root, text='生成排班中间表', command=make_mid_file).grid(row=4, column=1, )
+    Button(root, text='清空', command=clear_text).grid(row=5, column=1, )
     Separator(root, orient=VERTICAL).grid(row=2, column=2, rowspan=3, sticky="ns")
 
     Button(root, text='选择排课文件', command=lambda: utils.selectFile(path_course_file)).grid(row=2, column=3)
     Entry(root, textvariable=path_course_file).grid(row=3, column=3)
-    Checkbutton(root, text=("从'%s'生成" % sheet_name_class_simple), variable=chVarDis).grid(row=4, column=3, columnspan=1)
-    Button(root, text='生成课表', command=make_course_file).grid(row=5, column=3, columnspan=1)
+    Entry(root, textvariable=max_count).grid(row=4, column=3, columnspan=1, )
+    Button(root, text='预览方案', command=preview_schedu).grid(row=5, column=3, columnspan=1)
+    # Radiobutton(root, text=("从'%s'预览" % sheet_name_class_middle), variable=video,value=2).grid(row=5, column=3, columnspan=1)
+    Radiobutton(root, text=("从'%s'生成" % sheet_name_class_all), variable=video, value=1).grid(row=6, column=3,
+                                                                                             columnspan=1)
+    Radiobutton(root, text=("从'%s'生成" % sheet_name_class_simple), variable=video, value=2).grid(row=7, column=3,
+                                                                                                columnspan=1)
+    Button(root, text='生成课表', command=make_course_file).grid(row=8, column=3, columnspan=1)
     root.mainloop()
 
 
@@ -424,9 +517,8 @@ root = Tk()
 logs = ScrolledText(root, width=40, height=40)
 pathFile = StringVar()
 path_course_file = StringVar()
-classes = StringVar()
-classes.set('晨曦 晨光 曙光 朝阳 旭日')
-chVarDis = BooleanVar()
-chVarDis.set(False)
+classes = StringVar(value='晨曦 晨光 曙光 朝阳 旭日')
+video = IntVar(value=1)
+max_count = IntVar(value=30)
 if __name__ == '__main__':
     main()

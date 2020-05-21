@@ -2,11 +2,18 @@ from tkinter import *
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 
+import org_count
+
+
+def selectFile():
+    org_count.main()
+    pass
+
 
 def main():
     logs.grid(row=0, column=0, rowspan=6)
 
-    Button(root, text='选择文件', ).grid(row=0, column=1)
+    Button(root, text='选择文件', command=selectFile).grid(row=0, column=1)
     Entry(root, textvariable=pathFile).grid(row=1, column=1)
     tabControl.grid(row=2, column=1, rowspan=4)
     root.mainloop()
