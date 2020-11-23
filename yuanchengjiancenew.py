@@ -64,7 +64,8 @@ def add_to_results(the_results,org, part, row):
 
 
 def write_to_file(all_rows):
-    work_book = xlsxwriter.Workbook(pathFile.get() + '--' + datetime.datetime.now().strftime('%H%M') + '.xlsx')
+    filename = pathFile.get() + '--' + datetime.datetime.now().strftime('%H%M') + '.xlsx'
+    work_book = xlsxwriter.Workbook(filename)
     normal_format = work_book.add_format({
         'font_size': '12',
         'border': 1,
@@ -86,7 +87,7 @@ def write_to_file(all_rows):
     wirte_summary(sheet_city, normal_format, all_rows)
 
     work_book.close()
-    showlog('over')
+    showlog(filename)
 
 
 def wirte_summary(sheet_summary, normal_format, all_rows):
@@ -190,10 +191,13 @@ def main():
     Button(root, text='选择台账文件\n（Excel格式）', command=selectFile).grid(row=0, column=1)
     Entry(root, textvariable=pathFile).grid(row=1, column=1)
     Button(root, text='开始', command=startIt).grid(row=2, column=1)
+    Label(root, text="完成后统计文件在\n源文件所在文件夹", ).grid(row=3, column=1)
+
     root.mainloop()
 
 
 root = Tk()
+root.title('远程监测台账统计')
 logs = ScrolledText(root, width=40, height=30)
 pathFile = StringVar()
 classes = StringVar()

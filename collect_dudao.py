@@ -1,9 +1,13 @@
+# 汇总文件夹内所有督导打分表
 # coding=utf-8
 import datetime
+import os
+from pathlib import Path
 from tkinter import *
 from tkinter.scrolledtext import ScrolledText
 from tkinter.ttk import *
 from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askdirectory
 from tkinter.messagebox import *
 
 import xlrd
@@ -39,7 +43,7 @@ cities = {"济南": {"济南": [], "章丘": [], "平阴": [], "济阳": [], "�
 
 
 def selectFile():
-    file_path = askopenfilename(filetypes=[ ('All Files', '*')])
+    file_path = askdirectory()
     pathFile.set(file_path)
 
 def showlog(text):
@@ -50,6 +54,7 @@ def showlog(text):
 
 def add_to_results(the_results,org, part, row):
     if not orgs.__contains__(org):
+        showlog('错误：'+org+'\t'+row)
         return -1
     else:
         city = orgs.get(org)
@@ -62,8 +67,9 @@ def add_to_results(the_results,org, part, row):
         the_results[city][org][part].append(row)
 
 
-def write_to_file(results):
-    work_book = xlsxwriter.Workbook(pathFile.get() + '--' + datetime.datetime.now().strftime('%H%M') + '.xlsx')
+def write_to_file(all_rows):
+    filename = pathFile.get() + '--' + datetime.datetime.now().strftime('%H%M') + '.xlsx'
+    work_book = xlsxwriter.Workbook(filename)
     normal_format = work_book.add_format({
         'font_size': '12',
         'border': 1,
@@ -76,61 +82,125 @@ def write_to_file(results):
         'valign': 'vcenter', })
     worksheets = {}
 
-    sheet_city = work_book.add_worksheet('汇总分组')
-    current_row = 2
-    for i in range(0,36):
-        if results.__contains__(i):
-            datas = results[i]
-            for index, data in enumerate(datas):
-                sheet_city.write(current_row,0,index+1,none_format)
-                sheet_city.write_row(current_row, 1, data[1:], normal_format)
-                current_row += 1
-        sheet_city.write(current_row,0,'')
-        current_row += 1
+    sheet_city = work_book.add_worksheet('按全部地市汇总')
+    worksheets['按全部地市汇总'] = sheet_city
+    wirte_summary_all(sheet_city, normal_format, none_format,all_rows)
+
+    sheet_city = work_book.add_worksheet('按地市汇总')
+    worksheets['按地市汇总'] = sheet_city
+    wirte_summary(sheet_city, normal_format, all_rows)
 
     work_book.close()
-    showlog('over')
+    showlog(filename)
+
+
+def wirte_summary(sheet_summary, normal_format, all_rows):
+    m = 1
+    for city in cities.keys():
+        if all_rows.__contains__(city):
+            the_city = all_rows[city]
+            size = len(the_city)
+            if size > 1:
+                a = 'A%d:A%d' % (m + 1, m + size)
+                b = 'B%d:B%d' % (m + 1, m + size)
+                sheet_summary.merge_range(a, city, normal_format)
+                sheet_summary.merge_range(b, '=SUM(D%d:D%d)' % (m + 1, m + size), normal_format)
+            else:
+                sheet_summary.write(m, 0, city, normal_format)
+                sheet_summary.write(m, 1, '=SUM(D%d:D%d)' % (m + 1, m + size), normal_format)
+            for org in cities[city].keys():
+                if the_city.__contains__(org):
+                    parts = the_city[org]
+                    part_count = 0
+                    row = []
+                    # details = ''
+                    for part,values in parts.items():
+                        part_count += len(values)
+                        row.append(part)
+                        row.append(len(values))
+                        # for value in values:
+                        #     details += value
+                    # row.append(details)
+                    sheet_summary.write(m, 2, org, normal_format)
+                    sheet_summary.write(m, 3, part_count, normal_format)
+                    sheet_summary.write_row(m, 4, row, normal_format)
+                    m = m + 1
+    sheet_summary.write(m, 0, '合计', normal_format)
+    sheet_summary.write(m, 1, '=SUM(D:D)', normal_format)
+
+
+def wirte_summary_all(sheet_summary, normal_format,none_format, all_rows):
+    m = 1
+    for city in cities.keys():
+        the_city = cities[city]
+        size = len(the_city)
+        if size > 1:
+            a = 'A%d:A%d' % (m + 1, m + size)
+            b = 'B%d:B%d' % (m + 1, m + size)
+            sheet_summary.merge_range(a, city, normal_format)
+            sheet_summary.merge_range(b, '=SUM(D%d:D%d)' % (m + 1, m + size), normal_format)
+        else:
+            sheet_summary.write(m, 0, city, normal_format)
+            sheet_summary.write(m, 1, '=SUM(D%d:D%d)' % (m + 1, m + size), normal_format)
+        for org in cities[city].keys():
+            sheet_summary.write(m, 2, org, normal_format)
+            if all_rows.__contains__(city) and all_rows[city].__contains__(org):
+                parts = all_rows[city][org]
+                part_count = 0
+                row = []
+                # details = ''
+                for part,values in parts.items():
+                    part_count += len(values)
+                    row.append(part)
+                    row.append(len(values))
+                    # for value in values:
+                    #     details += value
+                # row.append(details)
+                sheet_summary.write(m, 3, part_count, normal_format)
+                sheet_summary.write_row(m, 4, row, normal_format)
+            else:
+                sheet_summary.write(m, 3, '-', none_format)
+            m = m + 1
+
+    sheet_summary.write(m, 0, '合计', normal_format)
+    sheet_summary.write(m, 1, '=SUM(D:D)', normal_format)
 
 
 def startIt():
-    group_count = 36
     if len(pathFile.get()) <= 0:
-        showinfo('提示', '先选择文件')
+        showinfo('提示', '先选择文件夹')
         return
     results = {}
-    try:
-        book = xlrd.open_workbook(pathFile.get())
-        sh = book.sheet_by_index(0)
-        # for v in sh.row_values(startline):
-        startline = 1
-        i = 0
-        for rx in range(startline, sh.nrows):
-            row = (sh.row_values(rx))
-            if not results.__contains__(i):
-                results[i] = []
-            results[i].append(row)
-            i = (i+1)%group_count
-            # showlog(row)
-        showlog(results)
-        write_to_file(results)
-        showlog('已完成')
-    except:
-        showlog('出错了')
+    files = list(sorted(Path(pathFile.get()).glob('**/*督导打分表*.xls')))
+    print((files))
+    for file in files:
+        org = file.name.replace('督导打分表', '').replace('.xls', '').replace('(1)', '')
+        try:
+            book = xlrd.open_workbook(file)
+            sh = book.sheet_by_name('督导打分表')
+            scord = sh.cell(10,7).value
+            showlog('%s\t%s\t%d' % (file.parent.name,org,scord))
 
-    showlog('finished')
+        except Exception as e:
+            showlog('%s\t%s\t出错了' % (file.parent.name,org))
+            print(str(e))
+        # write_to_file(results)
     return
 
 
 def main():
     logs.grid(row=0, column=0, rowspan=6)
 
-    Button(root, text='选择周报文件\n（TXT格式）', command=selectFile).grid(row=0, column=1)
+    Button(root, text='选择督导文件夹', command=selectFile).grid(row=0, column=1)
     Entry(root, textvariable=pathFile).grid(row=1, column=1)
     Button(root, text='开始', command=startIt).grid(row=2, column=1)
+    Label(root, text="完成后统计文件在\n源文件所在文件夹", ).grid(row=3, column=1)
+
     root.mainloop()
 
 
 root = Tk()
+root.title('汇总文件夹内所有督导打分表')
 logs = ScrolledText(root, width=40, height=30)
 pathFile = StringVar()
 classes = StringVar()
