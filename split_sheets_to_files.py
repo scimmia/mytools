@@ -7,6 +7,60 @@ from tkinter.filedialog import askopenfilename
 from tkinter.messagebox import *
 
 import openpyxl
+import shutil
+
+
+# 先将取消合并的单元格，再操作。
+def split_file():
+    try:
+        sheet_names = []
+        sheet_details = {}
+        start = start_line.get()
+        end = end_line.get()
+        col = col_line.get()
+        print(start_line.get())
+        print(end_line.get())
+        print(col_line.get())
+        file_path = pathFile.get()
+        book = openpyxl.load_workbook(file_path)
+        sheet = book.get_active_sheet()
+        name_temp = None
+        start_temp = start
+        for i in range(start, end + 1):
+            cel = sheet.cell(row=i, column=col).value
+            if cel is not None:
+                if name_temp is not None:
+                    sheet_names.append(name_temp)
+                    sheet_details[name_temp] = [start_temp, i - 1]
+                name_temp = cel
+                start_temp = i
+        if name_temp is not None:
+            sheet_names.append(name_temp)
+            sheet_details[name_temp] = [start_temp, end]
+        # book.close()
+
+        for sheet_name in sheet_names:
+            try:
+                showlog(sheet_name)
+                new_file_name = '%s--%s.xlsx' % (file_path, sheet_name)
+                # shutil.copyfile(file_path, new_file_name)
+                book = openpyxl.load_workbook(file_path)
+                sheet = book.get_active_sheet()
+                sheet.title = sheet_name
+                temp_start = sheet_details[sheet_name][0]
+                temp_end = sheet_details[sheet_name][1] + 1
+                if temp_end < end:
+                    sheet.delete_rows(temp_end, end + 1 - temp_end)
+                if temp_start > start:
+                    sheet.delete_rows(start, temp_start - start)
+                book.save(new_file_name)
+            except Exception as e:
+                showlog(str(e))
+
+    except Exception as e:
+        showlog(str(e))
+    showlog('finished')
+
 
 # 先将取消合并的单元格，再操作。
 def doIt():
@@ -23,7 +77,7 @@ def doIt():
         sheet = book.get_active_sheet()
         name_temp = None
         start_temp = start
-        for i in range(start, end+1):
+        for i in range(start, end + 1):
             cel = sheet.cell(row=i, column=col).value
             if cel is not None:
                 if name_temp is not None:
@@ -41,9 +95,9 @@ def doIt():
             temp_start = sheet_details[sheet_name][0]
             temp_end = sheet_details[sheet_name][1] + 1
             if temp_end < end:
-                copy_sheet.delete_rows(temp_end,end+1 - temp_end)
+                copy_sheet.delete_rows(temp_end, end + 1 - temp_end)
             if temp_start > start:
-                copy_sheet.delete_rows(start,temp_start - start)
+                copy_sheet.delete_rows(start, temp_start - start)
         book.remove_sheet(sheet)
         book.save(pathFile.get() + '--copy.xlsx')
         book.close()
@@ -59,7 +113,7 @@ def showlog(text):
 
 
 def selectFile():
-    file_path = askopenfilename(filetypes=[('XLS', '*.xls;*.xlsx'), ('All Files', '*')])
+    file_path = askopenfilename(filetypes=[('XLSX', '*.xlsx'), ('All Files', '*')])
     pathFile.set(file_path)
 
 
@@ -87,7 +141,7 @@ def startIt():
     if len(pathFile.get()) <= 0:
         showinfo('提示', '先选择文件')
         return
-    doIt()
+    split_file()
 
 
 def main():
@@ -101,8 +155,8 @@ def main():
     Entry(root, textvariable=end_line).grid(row=2, column=2)
     Label(root, text='哪一列', ).grid(row=3, column=1)
     Entry(root, textvariable=col_line).grid(row=3, column=2)
-    Button(root, text='开始分表', command=startIt).grid(row=4, column=1, columnspan=1)
-    Button(root, text='分成文件', command=split_sheets_to_files).grid(row=4, column=1, columnspan=1)
+    Button(root, text='开始', command=startIt).grid(row=4, column=1, columnspan=1)
+    Button(root, text='sheets到文件', command=split_sheets_to_files).grid(row=4, column=2, columnspan=1)
     root.mainloop()
 
 
