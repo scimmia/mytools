@@ -153,7 +153,7 @@ def doIt():
                 for part,value in the_results[org].items():
                     if row[0].find(part) >= 0:
                         print('%s--%d' % (part,value))
-                        sheet['F%d' % value] = row[1]
+                        sheet['F%d' % (value+1)] = row[1]
                         break
         nine = book.get_sheet_by_name('9')
         for index, row in enumerate(nine.values):
