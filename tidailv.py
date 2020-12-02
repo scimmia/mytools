@@ -138,17 +138,24 @@ def doIt():
             print(row[2]+'---'+row[4]+'----')
             org = row[2].replace("农商", "").replace("商行", "").replace("银", "").replace("行", "")
 
-            part = row[4]
+            part = row[4].replace('支行','').replace('分理处','')
             # if part.endswith('营业部') and part != '营业部':
             #     part = part.replace('营业部','')
             print('---'+org+'----'+part)
 
             add_to_results(the_results,org,part,index)
         eight = book.get_sheet_by_name('8')
+        all_orgs = orgs.keys()
         for index, row in enumerate(eight.values):
-            org = row[0][0:2]
-            if row[0].startswith('山东'):
+            org = ''
+            if row[0][4:6] in all_orgs:
+                org = row[0][4:6]
+            elif row[0][2:4] in all_orgs:
                 org = row[0][2:4]
+            elif row[0][0:2] in all_orgs:
+                org = row[0][0:2]
+            # if row[0].startswith('山东'):
+            #     org = row[0][2:4]
             if the_results.__contains__(org):
                 for part,value in the_results[org].items():
                     if row[0].find(part) >= 0:
