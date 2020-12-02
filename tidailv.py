@@ -164,7 +164,7 @@ def doIt():
                 for part,value in the_results[org].items():
                     if row[0].find(part) >= 0:
                         print('%s--%d' % (part,value))
-                        sheet['G%d' % value] = row[1]
+                        sheet['G%d' % (value+1)] = row[1]
                         break
         book.save(pathFile.get() + '--copy.xlsx')
     except Exception as e:
