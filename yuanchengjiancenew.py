@@ -173,7 +173,9 @@ def startIt():
         for rx in range(0, sh.nrows):
             row = sh.row(rx)
             if row[0].ctype == 2 and row[2].value.find('行') >= 0:
-                org = row[2].value.replace("农商", "").replace("商行", "").replace("银", "").replace("行", "")
+                org = row[2].value[0:2]
+                if not orgs.__contains__(org):
+                    org = row[2].value.replace("农商", "").replace("商行", "").replace("银", "").replace("行", "")
                 part = row[3].value.replace('支行','').replace('分理处','')
                 add_to_results(results,org,part,str(row[0].value))
                 pass
@@ -190,8 +192,10 @@ def main():
 
     Button(root, text='选择台账文件\n（Excel格式）', command=selectFile).grid(row=0, column=1)
     Entry(root, textvariable=pathFile).grid(row=1, column=1)
-    Button(root, text='开始', command=startIt).grid(row=2, column=1)
-    Label(root, text="完成后统计文件在\n源文件所在文件夹", ).grid(row=3, column=1)
+    Label(root, text="单独统计的筛选在下面填写，\n用空格分割，同一类用/分割", ).grid(row=2, column=1)
+    Entry(root, textvariable=filters).grid(row=3, column=1)
+    Button(root, text='开始', command=startIt).grid(row=4, column=1)
+    Label(root, text="完成后统计文件在\n源文件所在文件夹", ).grid(row=5, column=1)
 
     root.mainloop()
 
@@ -200,11 +204,8 @@ root = Tk()
 root.title('远程监测台账统计')
 logs = ScrolledText(root, width=40, height=30)
 pathFile = StringVar()
-classes = StringVar()
-classes.set('晨曦 晨光 曙光 朝阳 旭日')
-chVarDis = BooleanVar()
-check1 = Checkbutton(root, text="部分修改", variable=chVarDis)
-listbox = Listbox(root, selectmode=MULTIPLE)
+filters = StringVar()
+filters.set('')
 startline = -1
 if __name__ == '__main__':
     main()

@@ -38,94 +38,71 @@ cities = {"济南": {"济南": [], "章丘": [], "平阴": [], "济阳": [], "�
           "菏泽": {"菏泽": [], "曹县": [], "定陶": [], "成武": [], "单县": [], "巨野": [], "郓城": [], "鄄城": [], "东明": []}}
 
 
-
-def add_to_results(the_results,org, part, row):
+def add_to_results(the_results, org, part, row):
     if not orgs.__contains__(org):
-        showlog('错误：'+org+'\t'+row)
+        showlog('错误：' + org + '\t' + row)
         return -1
     else:
         if not the_results.__contains__(org):
             the_results[org] = {}
         if not the_results[org].__contains__(part):
-            the_results[org][part] = 0
+            the_results[org][part] = {}
+            the_results[org][part]['eight'] = []
+            the_results[org][part]['nine'] = []
         else:
-            showlog('重复p----'+part)
-
-        the_results[org][part]= row
-
-
-def unmerge():
-    try:
-        sheet_names = []
-        sheet_details = {}
-        start = start_line.get()
-        end = end_line.get()
-        col = col_line.get()
-        print(start_line.get())
-        print(end_line.get())
-        print(col_line.get())
-        book = openpyxl.load_workbook(pathFile.get())
-        sheet = book.get_active_sheet()
-        merges = sheet.merged_cell_ranges
-        for m in merges:
-            if m.min_row >= start and m.max_row <= end:
-                sheet.unmerge_cells(m.coord)
-        book.save(pathFile.get() + '--unmerge.xlsx')
-    except Exception as e:
-        showlog(str(e))
-    showlog('finished')
+            showlog('重复p----' + part)
+        the_results[org][part]['row'] = row + 1
 
 
-# 先将取消合并的单元格，再操作。
-def split_file():
-    try:
-        sheet_names = []
-        sheet_details = {}
-        start = start_line.get()
-        end = end_line.get()
-        col = col_line.get()
-        print(start_line.get())
-        print(end_line.get())
-        print(col_line.get())
-        file_path = pathFile.get()
-        book = openpyxl.load_workbook(file_path)
-        sheet = book.get_active_sheet()
-        name_temp = None
-        start_temp = start
-        for i in range(start, end + 1):
-            cel = sheet.cell(row=i, column=col).value
-            if cel is not None:
-                if name_temp is not None:
-                    sheet_names.append(name_temp)
-                    sheet_details[name_temp] = [start_temp, i - 1]
-                name_temp = cel
-                start_temp = i
-        if name_temp is not None:
-            sheet_names.append(name_temp)
-            sheet_details[name_temp] = [start_temp, end]
-        # book.close()
+def read_sheet_data(book, sheet_name, the_results):
+    all_orgs = orgs.keys()
+    src_sheet = book.get_sheet_by_name(sheet_name)
+    for index, row in enumerate(src_sheet.values):
+        if row[0][4:6] in all_orgs:
+            org = row[0][4:6]
+        elif row[0][2:4] in all_orgs:
+            org = row[0][2:4]
+        elif row[0][0:2] in all_orgs:
+            org = row[0][0:2]
+        else:
+            org = None
+        if the_results.__contains__(org):
+            for part, value in the_results[org].items():
+                if part.endswith('支行') or part.endswith('分理处') or (part.endswith('营业部') and part != '营业部'):
+                    temp = part.replace('支行', '').replace('分理处', '').replace('营业部','')
+                else:
+                    temp = part
+                if row[0].find(temp) >= 0:
+                    the_results[org][part][sheet_name].append((row[0], row[1]))
 
-        for sheet_name in sheet_names:
-            try:
-                showlog(sheet_name)
-                new_file_name = '%s--%s.xlsx' % (file_path, sheet_name)
-                # shutil.copyfile(file_path, new_file_name)
-                book = openpyxl.load_workbook(file_path)
-                sheet = book.get_active_sheet()
-                sheet.title = sheet_name
-                temp_start = sheet_details[sheet_name][0]
-                temp_end = sheet_details[sheet_name][1] + 1
-                if temp_end < end:
-                    sheet.delete_rows(temp_end, end + 1 - temp_end)
-                if temp_start > start:
-                    sheet.delete_rows(start, temp_start - start)
-                book.save(new_file_name)
-            except Exception as e:
-                showlog(str(e))
+                    # print('%s--%d--%s--%d' % (part, value,row[0], row[1]))
+                    # to_sheet['%s%d' % (col_name, value + 1)] = row[1]
+                    break
 
-    except Exception as e:
-        showlog(str(e))
-    showlog('finished')
+
+def from_sheet_to_sheet(src_sheet, to_sheet, col_name, the_results):
+    all_orgs = orgs.keys()
+    for index, row in enumerate(src_sheet.values):
+        if row[0][4:6] in all_orgs:
+            org = row[0][4:6]
+        elif row[0][2:4] in all_orgs:
+            org = row[0][2:4]
+        elif row[0][0:2] in all_orgs:
+            org = row[0][0:2]
+        else:
+            org = None
+        if the_results.__contains__(org):
+            for part, value in the_results[org].items():
+                if part.endswith('支行') or part.endswith('分理处'):
+                    temp = part.replace('支行', '').replace('分理处', '')
+                else:
+                    temp = part
+                if row[0].find(temp) >= 0:
+                    the_results[org][part][src_sheet.title].append((row[0], row[1]))
+
+                    # print('%s--%d--%s--%d' % (part, value,row[0], row[1]))
+                    # to_sheet['%s%d' % (col_name, value + 1)] = row[1]
+                    break
 
 
 # 先将取消合并的单元格，再操作。
@@ -134,46 +111,84 @@ def doIt():
         the_results = {}
         book = openpyxl.load_workbook(pathFile.get())
         sheet = book.get_sheet_by_name('示范单位')
-        for index ,row in enumerate(sheet.values):
-            print(row[2]+'---'+row[4]+'----')
+        for index, row in enumerate(sheet.values):
+            print(row[2] + '---' + row[4] + '----')
             org = row[2].replace("农商", "").replace("商行", "").replace("银", "").replace("行", "")
-
-            part = row[4].replace('支行','').replace('分理处','')
+            part = row[4]
             # if part.endswith('营业部') and part != '营业部':
             #     part = part.replace('营业部','')
-            print('---'+org+'----'+part)
+            print('---' + org + '----' + part)
 
-            add_to_results(the_results,org,part,index)
-        eight = book.get_sheet_by_name('8')
-        all_orgs = orgs.keys()
-        for index, row in enumerate(eight.values):
-            org = ''
-            if row[0][4:6] in all_orgs:
-                org = row[0][4:6]
-            elif row[0][2:4] in all_orgs:
-                org = row[0][2:4]
-            elif row[0][0:2] in all_orgs:
-                org = row[0][0:2]
-            # if row[0].startswith('山东'):
-            #     org = row[0][2:4]
-            if the_results.__contains__(org):
-                for part,value in the_results[org].items():
-                    if row[0].find(part) >= 0:
-                        print('%s--%d' % (part,value))
-                        sheet['F%d' % (value+1)] = row[1]
-                        break
-        nine = book.get_sheet_by_name('9')
-        for index, row in enumerate(nine.values):
-            org = row[0][0:2]
-            if row[0].startswith('山东'):
-                org = row[0][2:4]
-            if the_results.__contains__(org):
-                for part,value in the_results[org].items():
-                    if row[0].find(part) >= 0:
-                        print('%s--%d' % (part,value))
-                        sheet['G%d' % (value+1)] = row[1]
-                        break
+            add_to_results(the_results, org, part, index)
+        read_sheet_data(book, 'eight', the_results)
+        read_sheet_data(book, 'nine', the_results)
+
+        none_eight = []
+        none_nine = []
+        for city, city_value in the_results.items():
+            for part, value in city_value.items():
+                row = value['row']
+                eight = value['eight']
+                if len(eight) == 0:
+                    # showlog('%s--%d---八月无数据' % (part, row))
+                    none_eight.append((part,row))
+                elif len(eight) == 1:
+                    sheet['%s%d' % ('F', row)] = eight[0][1]
+                else:
+                    used_data = False
+                    for data in eight:
+                        if data[0].endswith(part):
+                            sheet['%s%d' % ('F', row)] = data[1]
+                            used_data = True
+                            showlog('%s--%s--%s--%f---采用了' % (city,part,data[0], data[1]))
+                            break
+                    if not used_data:
+                        showlog('%s--%s--%d---八月多数据' % (city, part, row))
+                    print(eight)
+                nine = value['nine']
+                if len(nine) == 0:
+                    # showlog('%s--%d---八月无数据' % (part, row))
+                    none_nine.append((part,row))
+                elif len(nine) == 1:
+                    sheet['%s%d' % ('G', row)] = nine[0][1]
+                else:
+                    used_data = False
+                    for data in nine:
+                        if data[0].endswith(part):
+                            sheet['%s%d' % ('G', row)] = data[1]
+                            used_data = True
+                            showlog('%s--%s--%s--%f---采用了' % (city,part,data[0], data[1]))
+                            break
+                    if not used_data:
+                        showlog('%s--%s--%d---九月多数据' % (city, part, row))
+                    print(nine)
+
+                # if len(nine) == 0:
+                #     showlog('%s--%d---九月无数据' % (part, row))
+                # elif len(nine) == 1:
+                #     sheet['%s%d' % ('G', row)] = nine[0][1]
+                # else:
+                #     showlog('%s--%d---九月多数据' % (part, row))
+                #     print(nine)
+
+                # if len(value['eight']) == 1 and len(value['nine']) == 1:
+                #     sheet['%s%d' % ('F', value['row'])] = value['eight'][0]
+                #     sheet['%s%d' % ('G', value['row'])] = value['nine'][0]
+                # else:
+                #     if len(value['eight']) == 0:
+                #         showlog('%s--八月无数据' % part)
+                #     if len(value['nine']) == 0:
+                #         showlog('%s--九月无数据' % part)
+        for e in none_eight:
+            showlog('%s--%d---八月无数据' % e)
+        for e in none_nine:
+            showlog('%s--%d---九月无数据' % e)
+        # eight = book.get_sheet_by_name('8')
+        # from_sheet_to_sheet(eight, sheet, 'F', the_results)
+        # nine = book.get_sheet_by_name('9')
+        # from_sheet_to_sheet(nine, sheet, 'G', the_results)
         book.save(pathFile.get() + '--copy.xlsx')
+        print('')
     except Exception as e:
         showlog(str(e))
     showlog('finished')

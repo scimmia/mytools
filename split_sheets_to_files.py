@@ -10,6 +10,28 @@ import openpyxl
 import shutil
 
 
+def unmerge():
+    try:
+        sheet_names = []
+        sheet_details = {}
+        start = start_line.get()
+        end = end_line.get()
+        col = col_line.get()
+        print(start_line.get())
+        print(end_line.get())
+        print(col_line.get())
+        book = openpyxl.load_workbook(pathFile.get())
+        sheet = book.get_active_sheet()
+        merges = sheet.merged_cell_ranges
+        for m in merges:
+            if m.min_row >= start and m.max_row <= end:
+                sheet.unmerge_cells(m.coord)
+        book.save(pathFile.get() + '--unmerge.xlsx')
+    except Exception as e:
+        showlog(str(e))
+    showlog('finished')
+
+
 # 先将取消合并的单元格，再操作。
 def split_file():
     try:
@@ -141,7 +163,7 @@ def startIt():
     if len(pathFile.get()) <= 0:
         showinfo('提示', '先选择文件')
         return
-    split_file()
+    unmerge()
 
 
 def main():

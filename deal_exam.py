@@ -10,6 +10,8 @@ from tkinter.messagebox import *
 import xlrd
 import xlsxwriter
 import json
+
+
 # 处理题库
 
 def showlog(text):
@@ -19,11 +21,23 @@ def showlog(text):
 
 
 def selectFile():
-    file_path = askopenfilename(filetypes=[('All Files', '*'),('XLS', '*.xls;*.xlsx')])
+    file_path = askopenfilename(filetypes=[('All Files', '*'), ('XLS', '*.xls;*.xlsx')])
     pathFile.set(file_path)
 
 
 def startIt():
+    # title
+    # qtype
+    # question
+    # answer
+    # a
+    # b
+    # c
+    # d
+    # e
+    # f
+    # g
+
     if len(pathFile.get()) <= 0:
         showinfo('提示', '先选择文件')
         return
@@ -32,10 +46,10 @@ def startIt():
         sh = book.sheet_by_index(0)
         exams = {}
         lines = []
-        for rx in range(1,sh.nrows):
+        for rx in range(1, sh.nrows):
             row = (sh.row_values(rx))
             if not exams.__contains__(row[0]):
-                exams[row[0]] = {'单选题':[],'多选题':[],'判断题':[]}
+                exams[row[0]] = {'单选题': [], '多选题': [], '判断题': []}
             exam = exams.get(row[0])
             q_type = 1
             # questions = exam.get(row[1])
@@ -66,10 +80,10 @@ def startIt():
                 option['shouldcheck'] = row[3].find(option['k']) >= 0
                 question["options"].append(option)
             else:
-                for i in range(4,11):
+                for i in range(4, 11):
                     option = {}
                     if sh.cell_type(rx, i) != 0:
-                        option['k'] = chr(i+61)
+                        option['k'] = chr(i + 61)
                         option['v'] = row[i]
                         option['shouldcheck'] = row[3].find(option['k']) >= 0
                         question["options"].append(option)
@@ -94,7 +108,7 @@ def startIt():
             exam.get(row[1]).append(question)
         summary = []
         m = ''
-        for title,exam in exams.items():
+        for title, exam in exams.items():
             s = {}
             s['title'] = title
             s['version'] = 1
@@ -102,12 +116,12 @@ def startIt():
             s['s'] = len(exam.get('单选题'))
             s['m'] = len(exam.get('多选题'))
             s['r'] = len(exam.get('判断题'))
-            s['total'] = s['s']+s['m']+s['r']
+            s['total'] = s['s'] + s['m'] + s['r']
             s['cloudid'] = 'cloud://myexam-ofzc5.6d79-myexam-ofzc5-1254219446/exams/%s.json' % title
-            m = m + json.dumps(s,ensure_ascii=False,sort_keys=True, indent=4) + '\n'
+            m = m + json.dumps(s, ensure_ascii=False, sort_keys=True, indent=4) + '\n'
             summary.append(s)
-            with open("exams/%s.json" % title, "w",encoding='utf-8') as f:
-                json.dump(exam, f,ensure_ascii=False,sort_keys=True, indent=4)
+            with open("exams/%s.json" % title, "w", encoding='utf-8') as f:
+                json.dump(exam, f, ensure_ascii=False, sort_keys=True, indent=4)
             file = open("exams/%s.txt" % title, 'w', encoding='utf-8')
             types = ['单选题', '多选题', '判断题']
             for t in types:
@@ -115,14 +129,14 @@ def startIt():
                 lines.append('\n')
                 ques = exam.get(t)
                 for index, q in enumerate(ques):
-                    lines.append('%d. %s %s\n' % (index+1, q['question'], q['answer']))
+                    lines.append('%d. %s %s\n' % (index + 1, q['question'], q['answer']))
                     options = q['options']
                     for o in options:
                         v = o['v']
                         if isinstance(v, float):
                             lines.append('%s. %d\n' % (o['k'], o['v']))
                         elif isinstance(v, str):
-                            if len(o['v'])>0:
+                            if len(o['v']) > 0:
                                 lines.append('%s. %s\n' % (o['k'], o['v']))
                     lines.append('\n')
 
@@ -132,7 +146,7 @@ def startIt():
         file = open("exams/summary-%s.json" % datetime.datetime.now().strftime('%H%M'), 'w', encoding='utf-8')
         file.write(m)
         file.close()
-        with open("exams/summary.json" , "w", encoding='utf-8') as f:
+        with open("exams/summary.json", "w", encoding='utf-8') as f:
             json.dump(summary, f, ensure_ascii=False, sort_keys=True, indent=4)
 
         showlog('已完成')
@@ -141,7 +155,6 @@ def startIt():
         showlog(str(e))
 
     showlog('finished')
-
 
 
 def start_txt():
@@ -165,18 +178,18 @@ def start_txt():
                 for line in f.readlines():
                     line = line.strip('\n')
                     # showlog(line)
-                    if line.find('判断')>0:
+                    if line.find('判断') > 0:
                         current_questions = exam.get('判断题')
                         current_type = 3
-                    elif line.find('单选')>0:
+                    elif line.find('单选') > 0:
                         current_questions = exam.get('单选题')
                         current_type = 1
-                    elif line.find('多选')>0:
+                    elif line.find('多选') > 0:
                         current_questions = exam.get('多选题')
                         current_type = 2
                     else:
                         point_pos = line.find('.')
-                        if point_pos>0 and point_pos<5:
+                        if point_pos > 0 and point_pos < 5:
                             if line[0].isdecimal():
                                 if question != None:
                                     current_questions.append(question)
@@ -185,14 +198,14 @@ def start_txt():
                                 question["myAnswer"] = ''
                                 question["options"] = []
                                 a = ''
-                                tmp = line[point_pos+1:].replace(' ','').replace('(','').replace(')','').replace('（','').replace('）','')
-                                as_temps = ['A','B','C','D','E','F','G']
+                                tmp = line[point_pos + 1:].replace(' ', '').replace('(', '').replace(')', '').replace(
+                                    '（', '').replace('）', '')
+                                as_temps = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
                                 for as_temp in as_temps:
-                                    if tmp.find(as_temp)>=0:
-                                        a+=as_temp
-                                        tmp = tmp.replace(as_temp,'')
+                                    if tmp.find(as_temp) >= 0:
+                                        a += as_temp
+                                        tmp = tmp.replace(as_temp, '')
                                 q = tmp
-
 
                                 # answer_pos = line.rfind('（')
                                 # q = line[point_pos+1:answer_pos]
@@ -201,7 +214,7 @@ def start_txt():
                                 question["answer"] = a
                                 qss.append(q)
                                 ass.append(a)
-                                showlog(q+'\t'+a)
+                                showlog(q + '\t' + a)
                                 if current_type == 3:
                                     option = {}
                                     option['k'] = 'A'
@@ -260,7 +273,7 @@ def start_txt_js():
                 ass = []
                 for line in f.readlines():
                     line = line.strip('\n')
-                    if len(line)>0 and line[0].isdecimal():
+                    if len(line) > 0 and line[0].isdecimal():
                         a = ''
                         point_pos = line.find('.')
                         tmp = line[point_pos + 1:].replace(' ', '').replace('(', '').replace(')', '').replace('（',
@@ -291,13 +304,126 @@ def start_txt_js():
         print(e)
 
 
+def start_doc_txt_js():
+    if len(pathFile.get()) <= 0:
+        showinfo('提示', '先选择文件')
+        return
+    try:
+        with open(pathFile.get(), "r", encoding='utf-8') as f:
+            try:
+                tq = ''
+                ta = ''
+                exam = {'单选题': [], '多选题': [], '判断题': []}
+                question = None
+                qss = []
+                ass = []
+                # 1 判断 2 单选 3 多选
+                current_type = 1
+                current_questions = exam.get('单选题')
+                for line in f.readlines():
+                    line = line.strip('\n')
+                    if line.find('判断') >= 0:
+                        current_questions = exam.get('判断题')
+                        current_type = 3
+                    elif line.find('单选') >= 0:
+                        current_questions = exam.get('单选题')
+                        current_type = 1
+                    elif line.find('多选') >= 0:
+                        current_questions = exam.get('多选题')
+                        current_type = 2
+                    else:
+                        if len(line) > 0 and line[0].isdecimal():
+                            question = {"checked": False}
+                            question["type"] = current_type
+                            question["myAnswer"] = ''
+                            question["options"] = []
+                            a = ''
+                            point_pos = line.find('、')
+                            if point_pos <0:
+                                point_pos = line.find('.')
+                            tmp = line[point_pos + 1:].replace(' ', '').replace('(', '').replace(')', '').replace('（',
+                                                                                                                  '').replace(
+                                '）', '')
+                            as_temps = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+                            for as_temp in as_temps:
+                                if tmp.find(as_temp) >= 0:
+                                    a += as_temp
+                                    tmp = tmp.replace(as_temp, '')
+                            q = re.sub(r'[^a-zA-Z\u4e00-\u9fa5\d]', "", tmp)
+
+                            question["question"] = q
+                            question["answer"] = a
+                            qss.append(q)
+                            ass.append(a)
+                            showlog(q + '\t' + a)
+                            if current_type == 3:
+                                option = {}
+                                option['k'] = 'A'
+                                option['v'] = '正确'
+                                option['shouldcheck'] = question["answer"].find(option['k']) >= 0
+                                question["options"].append(option)
+                                option = {}
+                                option['k'] = 'B'
+                                option['v'] = '错误'
+                                option['shouldcheck'] = question["answer"].find(option['k']) >= 0
+                                question["options"].append(option)
+                                current_questions.append(question)
+                            pass
+                        elif len(line) > 0 and line[0].isalpha():
+                            if question != None:
+                                if current_type == 1 or current_type == 2:
+                                    chooses = line.split('-|-')
+                                    for c in chooses:
+                                        option = {}
+                                        option['k'] = c[0]
+                                        option['v'] = c[2:]
+                                        option['shouldcheck'] = question["answer"].find(option['k']) >= 0
+                                        question["options"].append(option)
+                                    current_questions.append(question)
+                            pass
+
+                # for line in f.readlines():
+                #     line = line.strip('\n')
+                #     if len(line)>0 and line[0].isdecimal():
+                #         a = ''
+                #         point_pos = line.find('、')
+                #         tmp = line[point_pos + 1:].replace(' ', '').replace('(', '').replace(')', '').replace('（',
+                #                                                                                               '').replace(
+                #             '）', '')
+                #         as_temps = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+                #         for as_temp in as_temps:
+                #             if tmp.find(as_temp) >= 0:
+                #                 a += as_temp
+                #                 tmp = tmp.replace(as_temp, '')
+                #         q = re.sub(r'[^a-zA-Z\u4e00-\u9fa5\d]', "", tmp)
+                #         qss.append(q)
+                #         ass.append(a)
+
+                print('------------')
+                print(qss)
+                print(ass)
+                print(len(qss))
+                print(len(ass))
+                with open("exams/%s.json" % 'title', "w", encoding='utf-8') as f:
+                    json.dump(exam, f, ensure_ascii=False, sort_keys=True, indent=4)
+            except Exception as e:
+                showlog('出错了')
+                print(e)
+            finally:
+                f.close()
+        showlog('已完成')
+    except Exception as e:
+        showlog('出错了')
+        print(e)
+
+
 def export_json():
     if len(pathFile.get()) <= 0:
         showinfo('提示', '先选择文件')
         return
     try:
         with open(pathFile.get(), "r", encoding='utf-8') as load_f:
-    # with open("exams/廉洁自律_纪律处分条例.json", 'r', encoding='utf-8') as load_f:
+            # with open("exams/廉洁自律_纪律处分条例.json", 'r', encoding='utf-8') as load_f:
             load_dict = json.load(load_f)
             qss = []
             ass = []
@@ -312,7 +438,7 @@ def export_json():
                     for option in options:
                         if option['k'] in answers:
                             v = option['v']
-                            if isinstance(v,str):
+                            if isinstance(v, str):
                                 asss.append(v)
                             else:
                                 asss.append('%d' % (v))
@@ -333,7 +459,8 @@ def main():
     Button(root, text='excel输出', command=startIt).grid(row=2, column=1, columnspan=1)
     Button(root, text='txt输出', command=start_txt).grid(row=3, column=1, columnspan=1)
     Button(root, text='json导出', command=export_json).grid(row=4, column=1, columnspan=1)
-    Button(root, text='txt到js', command=start_txt_js).grid(row=5, column=1, columnspan=1)
+    # Button(root, text='txt到js', command=start_txt_js).grid(row=5, column=1, columnspan=1)
+    Button(root, text='doc_txt到js', command=start_doc_txt_js).grid(row=5, column=1, columnspan=1)
     root.mainloop()
 
 
