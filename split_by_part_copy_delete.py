@@ -43,7 +43,7 @@ import _thread
 
 
 def selectFile():
-    file_path = askopenfilename(filetypes=[('XLS', '*.xls;*.xlsx'), ('All Files', '*')])
+    file_path = askopenfilename(filetypes=[('XLSX', '*.xlsx'), ('All Files', '*')])
     pathFile.set(file_path)
 
 
@@ -106,39 +106,26 @@ def write_to_file(results):
 
     showlog('已完成')
 
-def get_city_org(name):
-    if not isinstance(name, str):
-        return None
-    else:
-        all_orgs = orgs.keys()
-        if name[4:6] in all_orgs:
-            org = name[4:6]
-        elif name[2:4] in all_orgs:
-            org = name[2:4]
-        elif name[0:2] in all_orgs:
-            org = name[0:2]
-        else:
-            return None
-        return [orgs[org], org]
 
 def startIt():
-    row_index = start_line.get() - 1
+    start = start_line.get()
+    end = end_line.get()
     org_index = col_line.get() - 1
     if len(pathFile.get()) <= 0:
         showinfo('提示', '先选择文件')
         return
     results = {}
+    source_file = pathFile.get()
     try:
-        book = xlrd.open_workbook(pathFile.get())
-        sh = book.sheet_by_index(0)
-        start = row_index
-        end = sh.nrows
-        for rx in range(row_index, sh.nrows):
-            row = sh.row_values(rx)
-            name = row[org_index]
-            if isinstance(name, str):
-                org = row[org_index].replace("农商", "").replace("商行", "").replace("银", "").replace("行", "")
-                add_to_results(results, org, rx)
+        book = openpyxl.load_workbook(source_file)
+        sheet = book.active
+        for rx in range(start, end+1):
+            org_temp = sheet.cell(row=rx, column=col_line.get()).value
+            if isinstance(org_temp, str):
+                org = org_temp.replace("农商", "").replace("商行", "").replace("银", "").replace("行", "").replace("市", "").replace(" ", "")
+                if len(org) >= 2:
+                    add_to_results(results, org, rx)
+
         name, suffix = os.path.splitext(pathFile.get())
         file_folder = name + '--' + datetime.datetime.now().strftime('%H%M')
         # file_folder = pathFile.get() + '--' + datetime.datetime.now().strftime('%H%M')
@@ -146,23 +133,75 @@ def startIt():
             os.makedirs(file_folder)
         for city, lines in results.items():
             filename = os.sep.join([file_folder, city + suffix])
-            copyfile(pathFile.get(), filename)
-            try:
-                book = openpyxl.load_workbook(filename)
-                sheet = book.get_active_sheet()
-                for rx in range(end,start,-1):
-                    if rx not in lines:
-                        sheet.delete_rows(rx)
-                book.save(filename)
-                showlog(city+'已完成')
-            except Exception as e:
-                showlog(str(e))
-            pass
-        showlog('已完成')
+
+            book = openpyxl.load_workbook(source_file)
+            sheet = book.active
+            if len(lines) >= 2:
+                temp_start = lines[0]
+                temp_end = lines[-1] + 1
+                if temp_end < end:
+                    sheet.delete_rows(temp_end, end + 1 - temp_end)
+                if temp_start > start:
+                    sheet.delete_rows(start, temp_start - start)
+            elif len(lines) == 1:
+                temp_start = lines[0]
+                temp_end = lines[0] + 1
+                if temp_end < end:
+                    sheet.delete_rows(temp_end, end + 1 - temp_end)
+                if temp_start > start:
+                    sheet.delete_rows(start, temp_start - start)
+            book.save(filename)
+            book.close()
+            showlog(city + '已完成')
     except Exception as e:
-        showlog('出错了')
         showlog(str(e))
+    showlog('已完成')
     return
+#
+# def startIt():
+#     start = start_line.get()
+#     end = end_line.get()
+#     org_index = col_line.get() - 1
+#     if len(pathFile.get()) <= 0:
+#         showinfo('提示', '先选择文件')
+#         return
+#     results = {}
+#     try:
+#         book = xlrd.open_workbook(pathFile.get())
+#         sh = book.sheet_by_index(0)
+#
+#         for rx in range(start-1, end):
+#             row = sh.row_values(rx)
+#             name = row[org_index]
+#             if isinstance(name, str):
+#                 org = row[org_index].replace("农商", "").replace("商行", "").replace("银", "").replace("行", "").replace("市", "")
+#                 if len(org) >= 2:
+#                     add_to_results(results, org, rx)
+#         name, suffix = os.path.splitext(pathFile.get())
+#         file_folder = name + '--' + datetime.datetime.now().strftime('%H%M')
+#         # file_folder = pathFile.get() + '--' + datetime.datetime.now().strftime('%H%M')
+#         if not os.path.exists(file_folder):
+#             os.makedirs(file_folder)
+#         for city, lines in results.items():
+#             filename = os.sep.join([file_folder, city + suffix])
+#             copyfile(pathFile.get(), filename)
+#             try:
+#                 book = openpyxl.load_workbook(filename)
+#                 sheet = book.active
+#                 for rx in range(end,start-1,-1):
+#                     org_temp = sheet.cell(row=rx,column=col_line.get()).value
+#                     if (not isinstance(org_temp, str) or org_temp.find(city)<0):
+#                         sheet.delete_rows(rx)
+#                 book.save(filename)
+#                 showlog(city+'已完成')
+#             except Exception as e:
+#                 showlog(str(e))
+#             pass
+#         showlog('已完成')
+#     except Exception as e:
+#         showlog('出错了')
+#         showlog(str(e))
+#     return
 
 
 def begin_work():
@@ -179,10 +218,12 @@ def main():
     Entry(root, textvariable=pathFile).grid(row=0, column=2)
     Label(root, text='开始行号', ).grid(row=1, column=1)
     Entry(root, textvariable=start_line).grid(row=1, column=2)
-    Label(root, text='哪一列', ).grid(row=2, column=1)
-    Entry(root, textvariable=col_line).grid(row=2, column=2)
-    Radiobutton(root, text=('按地市划分'), variable=video_split_type, value=1).grid(row=3, column=1)
-    Radiobutton(root, text=('按法人划分'), variable=video_split_type, value=2).grid(row=3, column=2)
+    Label(root, text='结束行号', ).grid(row=2, column=1)
+    Entry(root, textvariable=end_line).grid(row=2, column=2)
+    Label(root, text='哪一列', ).grid(row=3, column=1)
+    Entry(root, textvariable=col_line).grid(row=3, column=2)
+    Radiobutton(root, text=('按地市划分'), variable=video_split_type, value=1).grid(row=4, column=1)
+    Radiobutton(root, text=('按法人划分'), variable=video_split_type, value=2).grid(row=4, column=2)
     # Radiobutton(root, text=('分割成文件'), variable=video_file_type, value=1).grid(row=4, column=1)
     # Radiobutton(root, text=('分割成sheet'), variable=video_file_type, value=2).grid(row=4, column=2)
 
@@ -196,6 +237,7 @@ pathFile = StringVar()
 video_split_type = IntVar(value=1)
 video_file_type = IntVar(value=1)
 start_line = IntVar(value=1)
+end_line = IntVar()
 col_line = IntVar(value=1)
 if __name__ == '__main__':
     main()
