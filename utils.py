@@ -1,3 +1,5 @@
+import os
+import datetime
 from tkinter.filedialog import askopenfilename
 
 
@@ -51,3 +53,20 @@ def get_city_org(name):
         else:
             return None
         return [orgs[org], org]
+
+
+def mkdirs():
+    file_folder = 'folders--' + datetime.datetime.now().strftime('%H%M')
+    if not os.path.exists(file_folder):
+        os.makedirs(file_folder)
+    for city in cities.keys():
+        folder_city = os.sep.join([file_folder, city])
+        if not os.path.exists(folder_city):
+            os.makedirs(folder_city)
+        for org in cities[city].keys():
+            folder_org = os.sep.join([folder_city, org])
+            if not os.path.exists(folder_org):
+                os.makedirs(folder_org)
+    pass
+
+# mkdirs()
