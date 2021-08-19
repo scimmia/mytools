@@ -86,23 +86,52 @@ def startIt():
     if len(sheetName.get()) <= 0:
         sh = book.sheet_by_index(0)
     else:
-        sh = book.sheet_by_name(sheetName)
+        sh = book.sheet_by_name(sheetName.get())
     all_result = copy.deepcopy(city_count)
     the_result = {}
     error_count = 0
     col = start_col.get()-1
+    last_org = ''
     for rx in range(start_row.get()-1, sh.nrows):
         row = (sh.row_values(rx))
-        org = row[col].replace("农商", "").replace("商行", "").replace("银", "").replace("行", "")
+        org = row[col].replace("农商", "").replace("商行", "").replace("银", "").replace("行", "").replace(" ", "")
+        if isinstance(org,str) and len(org) == 0:
+            org = last_org
+            print(last_org)
+            print(row)
+        last_org = org
         res = add_to_results(all_result,the_result,org)
         if res == -1:
             error_count += 1
+            print(row)
 
     write_to_file(all_result,the_result)
     if error_count > 0:
-        showlog('错误：'+error_count+'条')
+        showlog('错误：%d条'% error_count)
     return
 
+
+
+def startTxt():
+    if len(pathFile.get()) <= 0:
+        showinfo('提示', '先选择文件')
+        return
+    all_result = copy.deepcopy(city_count)
+    the_result = {}
+    error_count = 0
+    with open(pathFile.get(), 'r',encoding='utf-8') as f:
+        for line in f:
+            orgs = line.split('、')
+            for org in orgs:
+                org_tmp = re.sub(r'[^\u4e00-\u9fa5]', "", org)[0:2]
+                res = add_to_results(all_result, the_result, org_tmp)
+                if res == -1:
+                    error_count += 1
+                    print(org)
+    write_to_file(all_result,the_result)
+    if error_count > 0:
+        showlog('错误：%d条'% error_count)
+    return
 
 def main():
     logs.grid(row=0, column=0, rowspan=6)
@@ -119,6 +148,7 @@ def main():
     Entry(root, textvariable=start_col).grid(row=3, column=2)
 
     Button(root, text='开始', command=startIt).grid(row=4, column=1)
+    Button(root, text='开始Txt', command=startTxt).grid(row=4, column=2)
     root.mainloop()
 
 
