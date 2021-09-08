@@ -84,7 +84,6 @@ def init_sheet(work_book, name):
     return ws
 
 
-
 def showlog(text):
     logs.insert(END, str(text) + "\n")
     logs.update()
@@ -138,7 +137,7 @@ def doIt():
         the_class = classes.get().split(" ")
         for c in the_class:
             class_rows[c] = {}
-
+        the_class_count = len(the_class)
         book = xlrd.open_workbook(pathFile.get())
         sh = book.sheet_by_index(0)
         wrong_results = []
@@ -152,7 +151,7 @@ def doIt():
         for rx in range(startline, sh.nrows):
             the_row = []
             row = (sh.row_values(rx))
-            class_name = the_class[class_index%5]
+            class_name = the_class[class_index % the_class_count]
             for i in selections:
                 the_row.append(row[i])
             if org_index != -1:
@@ -170,8 +169,9 @@ def doIt():
         all_rows = make_all_from_class_rows(class_rows)
         write_to_file(all_rows, class_rows, wrong_results)
         showlog('已完成')
-    except:
+    except Exception as e:
         showlog('出错了')
+        showlog(str(e))
 
     showlog('finished')
 
@@ -264,6 +264,7 @@ def wirte_summary(sheet_summary, normal_format, all_rows):
                     m = m + 1
     sheet_summary.write(m, 0, '合计', normal_format)
     sheet_summary.write(m, 1, '=SUM(D:D)', normal_format)
+
 
 def wirte_summary_all(sheet_summary, normal_format, all_rows):
     m = 0

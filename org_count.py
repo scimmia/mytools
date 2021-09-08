@@ -95,11 +95,15 @@ def startIt():
     for rx in range(start_row.get()-1, sh.nrows):
         row = (sh.row_values(rx))
         org = row[col].replace("农商", "").replace("商行", "").replace("银", "").replace("行", "").replace(" ", "")
-        if isinstance(org,str) and len(org) == 0:
-            org = last_org
-            print(last_org)
-            print(row)
-        last_org = org
+        # if isinstance(org,str) and len(org) == 0:
+        #     org = last_org
+        #     print(last_org)
+        #     print(row)
+        # last_org = org
+        if org == '济南':
+            org = '济南农商行'
+        if org == '莱芜':
+            org = '莱芜农商行'
         res = add_to_results(all_result,the_result,org)
         if res == -1:
             error_count += 1
